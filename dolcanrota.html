@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dolcan Rota">
+<meta name="theme-color" content="#FF8A1F">
+<meta name="robots" content="noindex,nofollow">
+<title>Dolcan Rota</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23FF8A1F'/%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M16 12h14a18 18 0 0 1 0 36H16zM25 21v18h5a9 9 0 0 0 0-18z'/%3E%3Ccircle cx='44' cy='52' r='4' fill='%233A1D0B'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root{
+  --orange:#FF8A1F;--orange-deep:#E85D04;--orange-soft:#FFD9A8;
+  --ink:#3A1D0B;--ink-soft:#7A5236;--paper:#FFF7EA;--white:#fff;
+  --hist:#6C4DF5;--food:#F0355B;--photo:#D99A00;--walk:#18A957;--me:#1273EB;
+  --shadow:0 4px 0 rgba(58,29,11,.22);
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--orange);color:var(--ink);font-family:var(--body);font-size:15px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+button:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+h1,h2,h3,p,dl{margin:0}
+.app{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.screen{flex:1;min-height:0;position:relative}
+
+/* Ana ekran */
+#home{overflow-y:auto;padding:22px 16px 28px;display:flex;flex-direction:column;gap:18px;background:linear-gradient(#FFA23F,var(--orange) 45%,var(--orange-deep))}
+.logo{display:flex;align-items:center;gap:12px}
+.logo svg{width:60px;height:60px;flex:none;filter:drop-shadow(0 4px 0 rgba(58,29,11,.25))}
+.word{font-family:var(--display);font-size:38px;line-height:.9;color:var(--white);font-weight:800;text-shadow:0 3px 0 var(--orange-deep)}
+.word b{display:block;font-size:19px;letter-spacing:.34em;color:var(--ink);text-shadow:none;font-weight:800;margin-top:4px}
+.city-card{position:relative;display:block;width:100%;height:300px;text-align:left;border-radius:26px;border:4px solid var(--white);box-shadow:0 8px 0 rgba(58,29,11,.25);overflow:hidden;background:#B8431B;color:var(--white)}
+.city-card:active{transform:translateY(3px)}
+.city-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.city-card::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 35%,rgba(40,16,4,.88))}
+.city-body{position:absolute;left:16px;right:16px;bottom:14px;z-index:1;display:flex;flex-direction:column;gap:6px}
+.city-name{font-family:var(--display);font-weight:800;font-size:40px;line-height:1}
+.city-meta{font-weight:800;font-size:13.5px}
+.go{align-self:flex-start;margin-top:4px;font-family:var(--display);font-weight:800;font-size:18px;color:var(--ink);background:var(--white);padding:7px 22px;border-radius:99px}
+.ghost{border:3px dashed rgba(255,255,255,.8);border-radius:20px;padding:14px 16px;color:var(--white);font-weight:800;width:100%;text-align:left}
+.ghost small{display:block;font-weight:700;color:var(--ink);margin-top:2px}
+.note{background:var(--paper);border-radius:16px;padding:12px 14px;font-weight:700;font-size:13.5px}
+
+/* Şehir ekranı */
+#city{display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 12px 6px}
+.back{width:40px;height:40px;border-radius:50%;background:var(--white);box-shadow:var(--shadow);display:grid;place-items:center;flex:none;font-weight:800;font-size:20px}
+.city-title{font-family:var(--display);font-weight:800;font-size:26px;color:var(--white);text-shadow:0 3px 0 var(--orange-deep);line-height:1}
+.gps{margin-left:auto;font-size:12px;font-weight:800;background:rgba(255,255,255,.9);padding:5px 10px;border-radius:99px;display:flex;align-items:center;gap:6px}
+.gps i{width:9px;height:9px;border-radius:50%;background:#B9A089}
+.gps.on i{background:var(--me);box-shadow:0 0 0 3px rgba(18,115,235,.25)}
+.gps.err i{background:var(--food)}
+.chips{display:flex;gap:8px;padding:4px 12px 10px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:7px;font-weight:800;font-size:14px;padding:0 15px 0 12px;border-radius:99px;background:var(--white);box-shadow:var(--shadow);height:40px}
+.chip i{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="false"]{background:rgba(255,255,255,.4);box-shadow:none;color:var(--ink-soft)}
+.chip[aria-pressed="false"] i{background:transparent;border:2px solid var(--ink-soft)}
+.view{flex:1;min-height:0;position:relative;border-top:4px solid var(--white);border-radius:22px 22px 0 0;overflow:hidden;background:#F6D9B0}
+#map{position:absolute;inset:0;background:#F6D9B0;font-family:var(--body)}
+.maplibregl-ctrl-attrib{font-size:10px}
+.mk{display:block;cursor:pointer}
+.mk.on{z-index:5}
+.mk span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;white-space:nowrap;background:var(--white);border-radius:99px;box-shadow:0 2px 0 rgba(58,29,11,.2);font-weight:800;font-size:11.5px;color:var(--ink);padding:1px 8px;font-family:var(--body);display:none;pointer-events:none}
+.zoomed .mk span,.mk.on span,.mk:hover span{display:block}
+.pin{width:30px;height:30px;margin-bottom:6px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--c);border:3px solid var(--white);box-shadow:-2px 3px 0 rgba(58,29,11,.3);display:grid;place-items:center}
+.pin b{transform:rotate(45deg);color:var(--white);font-weight:800;font-size:11px;line-height:1;font-family:var(--body)}
+.pin b:empty{width:8px;height:8px;border-radius:50%;background:var(--white)}
+.pin.ring b:empty{background:transparent;border:2.5px solid var(--white);width:11px;height:11px}
+.pin.done{filter:saturate(.3);opacity:.75}
+.pin.fav{border-color:#FFD23F}
+.pin.sel{width:38px;height:38px;border-color:var(--ink)}
+.rstart{width:30px;height:30px;border-radius:50%;background:var(--walk);border:3px solid var(--white);box-shadow:0 3px 0 rgba(58,29,11,.3);display:grid;place-items:center;color:var(--white);font-weight:800;font-family:var(--display);font-size:16px}
+.rstart.sel{border-color:var(--ink)}
+.medot{width:22px;height:22px;border-radius:50%;background:var(--me);border:4px solid var(--white);box-shadow:0 0 0 0 rgba(18,115,235,.5);animation:pulse 1.6s infinite}
+@keyframes pulse{to{box-shadow:0 0 0 20px rgba(18,115,235,0)}}
+.fab{position:absolute;right:12px;bottom:34px;width:52px;height:52px;border-radius:50%;background:var(--white);box-shadow:var(--shadow);display:grid;place-items:center;z-index:500}
+.fab span{width:18px;height:18px;border-radius:50%;border:4px solid var(--me);box-shadow:inset 0 0 0 3px var(--white),inset 0 0 0 9px var(--me)}
+#toast{position:absolute;left:12px;right:76px;bottom:34px;z-index:500;background:var(--ink);color:var(--white);padding:10px 14px;border-radius:14px;font-weight:700;font-size:13px}
+
+/* Liste */
+#list{position:absolute;inset:0;z-index:600;overflow-y:auto;background:var(--paper);padding:14px 16px 20px;display:flex;flex-direction:column;gap:8px}
+.lh{font-family:var(--display);font-weight:800;font-size:19px;margin-top:8px;display:flex;align-items:center;gap:8px}
+.lh i{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--white);border-radius:14px;padding:9px 12px;box-shadow:0 2px 0 rgba(58,29,11,.12);min-height:52px;border-left:6px solid var(--c)}
+.row b{display:block;font-weight:800;line-height:1.2}
+.row small{color:var(--ink-soft);font-weight:700}
+.row div{min-width:0;flex:1}
+.row em{font-style:normal;font-weight:800;font-size:12px;color:var(--ink-soft);flex:none;text-align:right}
+.empty,.foot{font-weight:700;color:var(--ink-soft);padding:14px 0;font-size:12.5px}
+
+/* Alt çubuk */
+.tabs{display:flex;background:var(--white);padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-shadow:0 -3px 0 rgba(58,29,11,.12);z-index:8}
+.tab{flex:1;height:44px;border-radius:14px;font-weight:800;font-size:14.5px;color:var(--ink-soft)}
+.tab[aria-selected="true"]{background:var(--orange-soft);color:var(--orange-deep)}
+
+/* Kart */
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:700;background:var(--paper);border-radius:24px 24px 0 0;box-shadow:0 -8px 24px rgba(58,29,11,.35);max-height:64%;overflow-y:auto;animation:rise .25s ease-out}
+@keyframes rise{from{transform:translateY(100%)}}
+.photo{position:relative;height:190px;background:var(--orange-soft)}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo a{position:absolute;right:8px;bottom:6px;font-size:10.5px;font-weight:800;color:var(--white);background:rgba(0,0,0,.5);padding:2px 8px;border-radius:99px;text-decoration:none}
+.photo.none{height:54px;background:none}
+.x{position:absolute;right:12px;top:12px;z-index:2;width:40px;height:40px;border-radius:50%;background:var(--white);box-shadow:var(--shadow);font-weight:800;font-size:18px}
+.sbody{padding:14px 16px 18px;display:flex;flex-direction:column;gap:11px}
+.tag{align-self:flex-start;font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--white);background:var(--c);padding:3px 10px;border-radius:99px}
+#sheet h2{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.1;text-wrap:balance}
+.why{font-weight:800;color:var(--orange-deep)}
+.sec{font-family:var(--display);font-weight:800;font-size:17px;margin-bottom:-6px}
+.histxt{line-height:1.5}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.facts dt{font-weight:800;color:var(--ink-soft)}
+.facts dd{margin:0;font-weight:700}
+.open-q{background:#FFE9C7;border-radius:10px;padding:6px 10px;font-size:12.5px;font-weight:700}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{min-height:46px;border-radius:14px;font-weight:800;font-size:14px;display:grid;place-items:center;text-align:center;text-decoration:none;padding:4px 8px;background:var(--white);color:var(--ink);box-shadow:var(--shadow)}
+.btn.primary{background:var(--walk);color:var(--white);box-shadow:0 4px 0 #0E7A3C}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--white)}
+@media (min-width:760px){#sheet{left:auto;right:16px;bottom:16px;width:400px;border-radius:24px;max-height:calc(100% - 32px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="home" class="screen">
+    <div class="logo">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fff"/><path fill="#E85D04" fill-rule="evenodd" d="M15 10h14a18 18 0 0 1 0 36H15zM24 19v18h5a9 9 0 0 0 0-18z"/><path d="M17 55c10 0 14-6 24-5" fill="none" stroke="#3A1D0B" stroke-width="3.5" stroke-linecap="round" stroke-dasharray=".1 7"/><circle cx="49" cy="50" r="5" fill="#3A1D0B"/></svg>
+      <div class="word">dolcan<b>ROTA</b></div>
+    </div>
+    <div id="cityCards"></div>
+    <button class="ghost" id="addCity" type="button">+ Şehir ekle<small>Sırada: Utrecht</small></button>
+    <p class="note" id="addNote" hidden>Yeni şehir için Claude'a şehir adını yazman yeterli. Noktalar araştırılıp doğrulanır, şehir kendi temasıyla buraya eklenir.</p>
+  </section>
+
+  <section id="city" class="screen" hidden>
+    <div class="topbar">
+      <button class="back" id="back" type="button" aria-label="Şehirlere dön">‹</button>
+      <h1 class="city-title" id="cityTitle"></h1>
+      <div class="gps" id="gps"><i></i><span>Konum bekleniyor</span></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="view">
+      <div id="map"></div>
+      <div id="list" hidden></div>
+      <button class="fab" id="locate" type="button" aria-label="Konumuma git"><span></span></button>
+      <div id="toast" hidden></div>
+      <div id="sheet" hidden></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab" data-tab="map" aria-selected="true" type="button">Harita</button>
+      <button class="tab" data-tab="list" aria-selected="false" type="button">Liste</button>
+      <button class="tab" data-tab="fav" aria-selected="false" type="button">Favoriler</button>
+    </nav>
+  </section>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+/* =====================================================================
+   ŞEHİR VERİSİ (arayüzden ayrı). Yeni şehir = CITIES içine yeni kayıt.
+   fee/hours null ise doğrulanamamıştır. wiki = fotoğrafın çekildiği Wikipedia maddesi.
+   ===================================================================== */
+const CITIES = {
+  amsterdam: {
+    name:"Amsterdam", updated:"08.10.2026", hero:"Canals_of_Amsterdam",
+    center:[52.3702,4.8935], zoom:14, minZoom:12,
+    bounds:[[52.29,4.74],[52.44,5.04]],
+    places:[
+      {id:"dam",cat:"hist",name:"Dam Meydanı",wiki:"Dam_Square",lat:52.3731006,lon:4.8924274,pid:"ChIJq-ry-tkJxkcR8i94uYaBUig",desc:"Şehrin kalbi. Kraliyet Sarayı, Nieuwe Kerk ve Ulusal Anıt aynı meydanda.",hist:"Amsterdam'ın adı buradan gelir: 1270 dolaylarında Amstel nehrine bir set (dam) kuruldu ve çevresindeki yerleşim \"Amstelredam\" diye anıldı. Set zamanla genişleyip şehrin pazar meydanına dönüştü, gemiler bir dönem meydanın dibine kadar yanaşırdı. Batı yanındaki dev yapı 17. yüzyılda belediye sarayı olarak yapıldı, yanındaki Nieuwe Kerk ise 15. yüzyıldan kalma ve Hollanda hükümdarlarının tahta çıkış törenleri burada yapılır. Meydanın doğusundaki 22 metrelik beyaz dikilitaş, İkinci Dünya Savaşı kurbanları için 1956'da dikilen Ulusal Anıt'tır, her 4 Mayıs'ta anma töreni burada olur. 7 Mayıs 1945'te, kurtuluşu kutlayan kalabalığa Alman askerleri ateş açtı ve 30'dan fazla kişi öldü.",why:"Bütün merkez rotaları buradan dağılır.",dur:"15 dk",fee:"Ücretsiz",hours:"Her zaman açık"},
+      {id:"paleis",cat:"hist",name:"Koninklijk Paleis (Kraliyet Sarayı)",wiki:"Royal_Palace_of_Amsterdam",lat:52.3731835,lon:4.8913758,pid:"ChIJFQ6IwMYJxkcRis8dtZlOkTk",desc:"Dam'ın batı yanını kaplayan saray. Sesli rehber girişe dahil.",hist:"Saray olarak değil, belediye binası olarak yapıldı. İnşaat 1648'de, Seksen Yıl Savaşı'nın bittiği yıl başladı, mimarı Jacob van Campen'di ve bina 1655'te açıldı. Bataklık zeminde durabilmesi için 13.659 ahşap kazık üzerine oturtuldu, bu sayı Hollandalı öğrencilere hâlâ ezberletilir. Altın Çağ'ın en zengin şehrinin gücünü göstermek için yapılmıştı, çatısındaki Atlas heykeli gökküreyi taşır ve içerideki Burgerzaal'ın mermer zemininde dünya haritaları vardır. 1808'de Napolyon'un kardeşi Louis Bonaparte Hollanda kralı olunca binayı saraya çevirdi. Bugün kral burada yaşamaz, ama devlet ziyaretleri ve resmî törenler için kullanılır.",why:"İçerisi dışından beklenenden çok daha gösterişli.",dur:"1 sa",fee:null,hours:"Her gün 10:00-17:00 (tören günlerinde kapanabilir)"},
+      {id:"begijnhof",cat:"hist",name:"Begijnhof",wiki:"Begijnhof,_Amsterdam",lat:52.3694247,lon:4.8904379,pid:"ChIJeSe5CsEJxkcRdRlM21_MA9s",desc:"Alışveriş caddesinin hemen arkasında, kapıdan girince sessizleşen ortaçağ avlusu.",hist:"14. yüzyılda \"begijn\"ler için kuruldu: rahibe yemini etmeden, dindar ve bağımsız bir hayat süren kadınlar. Avlu, şehrin ortaçağ sokak seviyesinde kaldığı için çevresinden yaklaşık bir metre alçaktadır. 1421 ve 1452 yangınları ahşap evlerin çoğunu yok etti, 34 numaradaki Houten Huys (1420'ler) ayakta kalan ve şehrin en eski ahşap evi sayılan yapıdır. Amsterdam 1578'de Protestanlığa geçince avludaki şapel elden alındı ve 1607'de İngiliz Reform Kilisesi'ne verildi. Katolik begijnler de tam karşısına, dışarıdan ev gibi görünen gizli bir kilise yaptılar. Son begijn 1971'de öldü.",why:"Kalabalığın ortasında beş dakikalık sakinlik.",dur:"15 dk",fee:"Ücretsiz",hours:"Her gün 10:00-18:00",tip:"İçeride insanlar yaşıyor: sessiz ol, video çekme. Vlog için giriş kapısının dışında anlat."},
+      {id:"oudekerk",cat:"hist",name:"Oude Kerk",wiki:"Oude_Kerk,_Amsterdam",lat:52.3741277,lon:4.8982046,pid:"ChIJL33h87gJxkcRIu1FY7IyWV4",desc:"Amsterdam'ın ayakta kalan en eski binası, De Wallen'in tam ortasında.",hist:"13. yüzyılda ahşap bir şapel olarak başladı, taş kilise 1306'da kutsandı ve denizcilerin koruyucusu Aziz Nikolaos'a adandı. Yüzyıllar boyunca eklene eklene büyüdü, ahşap tonozu Avrupa'nın en büyük ortaçağ ahşap tavanlarından biridir. Zemini baştan sona mezar taşlarıyla kaplıdır, altında binlerce Amsterdamlı yatar. Rembrandt'ın eşi Saskia da 1642'de buraya gömüldü. 1578'de şehir Protestan olunca kilise Kalvinistlere geçti, heykelleri ve süslemeleri söküldü. Bugün kilisenin kapısı kırmızı fener vitrinlerine bakar: şehrin en eski ibadethanesi ile en eski mesleği yan yanadır.",why:"Dışarıdan görmek ücretsiz ve yeterli olabilir.",dur:"30 dk",fee:"Yaklaşık €15 (ziyaretçi yorumundan, doğrula)",hours:"Pzt-Cmt 10:00-18:00, Paz 13:00-17:30"},
+      {id:"annefrank",cat:"hist",name:"Anne Frank Evi",wiki:"Anne_Frank_House",lat:52.3752182,lon:4.8839765,pid:"ChIJSRE-IcUJxkcRCltjPmVdmtQ",desc:"Prinsengracht 263. Frank ailesinin saklandığı arka ev. Giriş saatli, içeride fotoğraf yok.",hist:"Bina, Otto Frank'ın şirketinin deposu ve ofisiydi. Aile 6 Temmuz 1942'de arka taraftaki gizli bölüme (Achterhuis) geçti, giriş dönen bir kitaplıkla gizlenmişti. Toplam sekiz kişi burada iki yıldan uzun süre, gündüzleri ses çıkarmadan yaşadı. Anne günlüğünü burada yazdı. 4 Ağustos 1944'te ihbar üzerine yakalandılar, sekiz kişiden yalnızca Otto Frank kamplardan sağ döndü. Anne, 1945 başında Bergen-Belsen'de 15 yaşında öldü. Günlük 1947'de yayımlandı, ev 1960'ta müze olarak açıldı.",why:"Şehrin en ağır ve en önemli durağı.",dur:"1 sa",fee:null,hours:"Her gün 09:00-22:00",tip:"Biletler yalnızca internetten satılıyor ve haftalar önce tükeniyor. 14 Ekim için hemen bak."},
+      {id:"westerkerk",cat:"hist",name:"Westerkerk",wiki:"Westerkerk",lat:52.3745315,lon:4.8835481,pid:"ChIJkyv4z8QJxkcR9FqUIxss0SM",desc:"Prinsengracht kıyısındaki Protestan kilisesi ve şehrin en yüksek kilise kulesi.",hist:"1620-1631 arasında, mimar Hendrick de Keyser'in tasarımıyla yapıldı. 85 metrelik kulesi Westertoren, Amsterdam'ın en yüksek kilise kulesidir ve tepesinde İmparator I. Maximilian'ın şehre armasında kullanma hakkı verdiği imparatorluk tacı durur. Rembrandt 1669'da yoksul biri olarak buraya gömüldü, mezarının tam yeri bilinmiyor, içeride yalnızca bir anma plaketi var. Anne Frank saklandığı evden bu kulenin çanlarını duyar ve günlüğünde onlardan söz eder.",why:"Anne Frank Evi'nin hemen yanında.",dur:"15 dk",fee:null,hours:"Pzt-Cum 11:00-15:00, hafta sonu kapalı"},
+      {id:"rijks",cat:"hist",name:"Rijksmuseum",wiki:"Rijksmuseum",lat:52.3599976,lon:4.8852188,pid:"ChIJ5Ra7we4JxkcRhYVAaq5zQ9U",desc:"Hollanda'nın ulusal müzesi: Rembrandt, Vermeer ve Gece Devriyesi.",hist:"Müze 1800'de Lahey'de açıldı ve 1808'de Amsterdam'a taşındı. Bugünkü bina mimar Pierre Cuypers'in eseridir ve 1885'te açıldı. Cuypers aynı yıllarda Amsterdam Centraal garını da tasarladı, iki binanın birbirine benzemesi bundandır. Binanın ortasından geçen tonozlu geçit baştan beri şehrin güneyine açılan kapı olarak düşünülmüştü, bugün bisikletliler içinden geçer. On yıl süren büyük yenileme 2013'te bitti. Koleksiyonun yıldızı Rembrandt'ın 1642 tarihli Gece Devriyesi'dir.",why:"Tek müze seçeceksen bu. Geçit ve bahçe ücretsiz.",dur:"2,5 sa",fee:null,hours:"Her gün 09:00-17:00",tip:"Saatli rezervasyon al."},
+      {id:"rembrandt",cat:"hist",name:"Rembrandthuis",wiki:"Rembrandt_House_Museum",lat:52.369369,lon:4.901235,pid:"ChIJNR35jYUJxkcRALmB_1MbY54",desc:"Rembrandt'ın yaşadığı ve çalıştığı ev. Gravür ve boya yapımı gösterimleri var.",hist:"Ev 1606'da yapıldı. Rembrandt 1639'da, ününün zirvesindeyken, 13.000 guldene satın aldı. Bu o dönem için çok yüksek bir paraydı ve taksitlerini hiçbir zaman tam ödeyemedi. Gece Devriyesi'ni bu evde yaşarken yaptı, üst kattaki atölyede öğrenci yetiştirdi. 1656'da iflas etti, eşyaları ve koleksiyonu açık artırmayla satıldı, 1658'de evden çıkmak zorunda kaldı. İflas sırasında tutulan eşya listesi sayesinde ev bugün o günkü hâline göre döşenebildi. 1911'de müze oldu.",why:"Küçük ama atölye hissi gerçek.",dur:"1 sa",fee:null,hours:"Her gün 10:00-18:00"},
+      {id:"waag",cat:"hist",name:"De Waag (Nieuwmarkt)",wiki:"Waag,_Amsterdam",lat:52.3727115,lon:4.9004026,pid:"ChIJVR5Sl74JxkcRPvBLwwIgPmA",desc:"Nieuwmarkt'ın ortasındaki kuleli, kale görünümlü yapı.",hist:"1488'de şehir surlarının kapılarından biri, Sint Antoniespoort olarak yapıldı. Şehir büyüyüp surlar yıkılınca işlevsiz kaldı ve 1617'de tartı evine (waag) çevrildi: tüccarların malları burada resmî olarak tartılırdı. Üst katlarda loncalar toplanırdı. Cerrahlar loncasının anatomi salonu da buradaydı ve Rembrandt'ın 1632 tarihli \"Dr. Nicolaes Tulp'un Anatomi Dersi\" tablosu bu lonca için yapıldı. İkinci Dünya Savaşı'nda çevresi Yahudi mahallesiydi ve meydan toplama noktası olarak kullanıldı.",why:"Meydandan bakmak yeter. İçi bugün restoran ve bütçe dostu değil.",dur:"10 dk",fee:"Dışarıdan ücretsiz",hours:null},
+      {id:"montel",cat:"hist",name:"Montelbaanstoren",wiki:"Montelbaanstoren",lat:52.3720106,lon:4.9056278,pid:"ChIJDxYOhLsJxkcRmbq1H5bc6kE",desc:"Oudeschans kanalının kıyısında, tuğla gövdeli ve beyaz külahlı kule.",hist:"1516'da şehir surlarının parçası olarak, limanı ve tersaneleri korumak için yapıldı. Savunma işlevi kalmayınca 1606'da Hendrick de Keyser süslü üst bölümü ve saat kulesini ekledi. Saati ve çanları sık sık yanlış zamanda çaldığı için halk kuleye \"Malle Jaap\" (Şaşkın Jaap) adını taktı. Rembrandt yakınlarda otururdu ve kuleyi çizimlerinde kullandı.",why:"Turist akışının dışında, kanal kenarında sakin.",dur:"10 dk",fee:"Ücretsiz (içi kapalı)",hours:"Dışarıdan her zaman"},
+      {id:"magere",cat:"hist",name:"Magere Brug",wiki:"Magere_Brug",lat:52.3635978,lon:4.9023824,pid:"ChIJmSIs9ZYJxkcRkx-Ou1QOZFI",desc:"Amstel üzerindeki beyaz ahşap açılır köprü.",hist:"İlk köprü 1691'de yapıldı ve o kadar dardı ki iki kişi yan yana zor geçerdi, \"sıska köprü\" adı buradan gelir. Şehir efsanesine göre köprüyü, nehrin iki yakasında oturan Mager kız kardeşler birbirlerini kolayca ziyaret etmek için yaptırmıştır. 1871'de genişletildi, bugünkü yapı 1934 tarihlidir. Hâlâ tekneler için elle açılıp kapanır. Akşamları yüzlerce ampulle aydınlatılır ve 1971 yapımı James Bond filmi \"Diamonds Are Forever\"da görünür.",why:"Gece ışıklandırmasıyla en güzel hâlinde.",dur:"10 dk",fee:"Ücretsiz",hours:"Her zaman açık"},
+      {id:"seven",cat:"photo",name:"Yedi Köprü Manzarası",wiki:"Reguliersgracht",lat:52.3649598,lon:4.8958703,pid:"ChIJJ6ZGa58JxkcRlJer3MCjMuU",desc:"Reguliersgracht boyunca arka arkaya dizilen köprü kemerleri.",hist:"Reguliersgracht, 17. yüzyılda kanal halkasının genişlemesi sırasında açıldı. Kanalı kesen yedi kemerli köprü aynı hizada durduğu için su seviyesinden bakınca iç içe görünür.",why:"Klasik Amsterdam karesi.",dur:"10 dk",fee:"Ücretsiz",hours:"Her zaman",tip:"Yorumlara göre köprülerin hepsi karadan görünmüyor. En iyi hâli akşam ışıklarıyla veya tekneden."},
+      {id:"dancing",cat:"photo",name:"Dans Eden Evler",wiki:"Amstel",lat:52.3677143,lon:4.8970266,pid:"ChIJBfLALQAJxkcRyOrYIGjehn0",desc:"Amstel'in karşı kıyısında birbirine yaslanmış eğri evler.",hist:"Amsterdam evleri bataklık zemine çakılan ahşap kazıkların üzerinde durur. Kazıklar yüzyıllar içinde çürüyüp oturdukça evler yana yatmıştır, bu sıra şehirdeki en belirgin örnektir.",why:"Kalabalık yok, kadraj hazır.",dur:"10 dk",fee:"Ücretsiz",hours:"Her zaman"},
+      {id:"keizers",cat:"photo",name:"Keizersgracht Manzara Noktası",wiki:"Keizersgracht",lat:52.3636729,lon:4.8981499,pid:"ChIJMVP6UgAJxkcRbNQ1qvJWrgU",desc:"Evlerin ve ağaçların suya yansıdığı sakin bir kanal köşesi.",hist:"Keizersgracht (İmparator Kanalı) adını I. Maximilian'dan alır ve üç ana kanalın en genişidir. Kanal halkasının inşasına 1613'te başlandı, halka 2010'da UNESCO Dünya Mirası listesine girdi.",why:"Sonbahar yaprakları için birebir.",dur:"10 dk",fee:"Ücretsiz",hours:"Her zaman"},
+      {id:"amstel",cat:"photo",name:"Amstel Kıyısı",wiki:"Magere_Brug",lat:52.3642627,lon:4.901162,pid:"ChIJKUQVXQAJxkcR15qSn8LEW40",desc:"Nehir kıyısından Magere Brug'a bakan açı.",why:"Köprüyü tek karede almak için.",dur:"10 dk",fee:"Ücretsiz",hours:"Her zaman"},
+      {id:"vleminckx",cat:"food",name:"Vleminckx (Vlaams Friteshuis)",wiki:"French_fries",gen:1,lat:52.3678913,lon:4.8909863,pid:"ChIJW8FgycEJxkcRImIYQha8SXI",price:"€",eat:"Kağıt külahta patat, sos seçimi geniş. Paket servis, oturma yok.",why:"Şehrin en bilinen patatçısı, kuyruk hızlı ilerliyor.",hours:"Her gün 11:00-19:00 (Per 20:00)"},
+      {id:"fabel",cat:"food",name:"Fabel Friet (Runstraat)",wiki:"French_fries",gen:1,lat:52.3688273,lon:4.8840617,pid:"ChIJrftMriIJxkcRmsYdm9XycFA",price:"€",eat:"Trüf mayonez ve parmesanlı patat, yaklaşık €7. Bir porsiyon iki kişiye yeter.",why:"Sosyal medyadaki ünlü patat. Kanal kenarında yenir.",hours:"Her gün 11:00-21:00"},
+      {id:"wigboldus",cat:"food",name:"Rob Wigboldus Vishandel",wiki:"Kibbeling",gen:1,lat:52.3741861,lon:4.8938745,pid:"ChIJ_R_GDccJxkcRjIPrA98swRk",price:"€",eat:"Ringa (haring) sandviç ve kibbeling. Tabak yaklaşık €5-6.",why:"Dam'ın dibinde, turistik olmayan balıkçı.",hours:"Her gün 08:00-17:00",tip:"Yalnızca nakit."},
+      {id:"jonk",cat:"food",name:"Haringhandel Jonk",wiki:"Soused_herring",gen:1,lat:52.3687771,lon:4.8908574,pid:"ChIJb4_OusEJxkcRf7xySAnF9sY",price:"€",eat:"Soğan ve turşulu ringa sandviç, yaklaşık €7. Bezelye çorbası (snert) da var.",why:"Spui'de ayaküstü Hollanda klasiği.",hours:"Pzt-Cmt 10:00-17:30, Paz 10:30-17:15"},
+      {id:"freddy",cat:"food",name:"Freddy Fryday",wiki:"French_fries",gen:1,lat:52.3760457,lon:4.8920046,pid:"ChIJn6SwggQJxkcRYesbVBBO6DY",price:"€",eat:"Üstü dolu patat (çekme et, trüf parmesan). Orta boy yaklaşık €10, tek kişiyi doyurur.",why:"Patatı öğün yapmak için.",hours:"Her gün 12:00-22:00"},
+      {id:"bert",cat:"food",name:"Broodje Bert",lat:52.3701537,lon:4.8884686,pid:"ChIJ7dB5fcEJxkcRIjcn4DVPOtU",price:"€€",eat:"Büyük porsiyon sandviç ve omlet, yanında salata.",why:"Kanal kenarında kahvaltı ve öğle için.",hours:"Sal-Paz 09:00-17:30, Pazartesi kapalı"},
+      {id:"bhatti",cat:"food",name:"Bhatti Pasal",wiki:"Momo_(food)",gen:1,lat:52.3680459,lon:4.8909001,pid:"ChIJmca4IG0NxkcRTbbyiIQHpVI",price:"€€",eat:"Nepal mantısı (momo), thali, chow mein.",why:"Merkezde doyurucu oturmalı akşam yemeği.",hours:"13:00-22:00, Çarşamba kapalı",tip:"14 Ekim Çarşamba'ya denk geliyor, o gün kapalı."},
+      {id:"pakhuis",cat:"food",name:"Eetcafé 't Pakhuis",wiki:"Spare_ribs",gen:1,lat:52.3682008,lon:4.8906417,pid:"ChIJhU0BuMEJxkcRenGxFkolG5U",price:"€€",eat:"Kaburga (spare ribs). Yorumlara göre Pzt-Çar ve Cuma sınırsız kaburga.",why:"Et yiyip doymak istersen.",hours:"Her gün 13:00-23:00",tip:"Rezervasyon iyi olur. Sınırsız menü günlerini doğrula."},
+      {id:"siejoe",cat:"food",name:"Eethuis Sie Joe",wiki:"Gado-gado",gen:1,lat:52.3743059,lon:4.8918899,pid:"ChIJlRQB-8YJxkcRD7E3ZVHkAEA",price:"€€",eat:"Endonezya ev yemeği: gado gado, nasi goreng, saté. Tabak yaklaşık €15.",why:"Dam'ın arkasında küçük aile işletmesi.",hours:"Pzt-Cmt 12:30-19:00, Pazar kapalı"},
+      {id:"winkel",cat:"food",name:"Winkel 43",wiki:"Apple_pie",gen:1,lat:52.3790944,lon:4.8862845,pid:"ChIJAUBsos8JxkcRwnuLcQmb2-M",price:"€€",eat:"Kremalı sıcak elmalı turta (appeltaart).",why:"Şehrin en ünlü elmalı turtası, Jordaan rotasının başında.",hours:"Her gün sabahtan gece yarısına"},
+      {id:"swieti",cat:"food",name:"Swieti Sranang",wiki:"Roti",gen:1,lat:52.3782121,lon:4.8831558,pid:"ChIJEUZlWc4JxkcRORNbUWEaNy8",price:"€€",eat:"Surinam mutfağı: roti, nasi goreng. Porsiyonlar iki öğünlük.",why:"Jordaan'da fiyat performansın en iyisi.",hours:"Pzt-Cum 12:00-20:00, hafta sonu 16:00-20:00",tip:"Paket servis. Visa ve Mastercard geçmiyor, nakit bulundur."},
+      {id:"cuyp",cat:"food",name:"Albert Cuyp Pazarı",wiki:"Albert_Cuyp_Market",lat:52.3553059,lon:4.8915504,pid:"ChIJZapZuvIJxkcRmAvJTwrtnNE",price:"€",eat:"Tezgâhlardan stroopwafel, peynir, kibbeling, sokak yemeği.",hist:"1905'ten beri kurulan pazar, Hollanda'nın en büyük gündüz sokak pazarı olarak bilinir. Adını 17. yüzyıl ressamı Albert Cuyp'tan alır.",why:"Tek sokakta ucuza Hollanda tadımı.",hours:"Pzt-Cmt 09:30-17:00, Pazar kapalı"},
+      {id:"rudi",cat:"food",name:"Rudi's Original Stroopwafels",wiki:"Stroopwafel",gen:1,lat:52.3558047,lon:4.8950112,pid:"ChIJIY8-Y40JxkcRBw2QcBx7H8E",price:"€",eat:"Gözünün önünde yapılan sıcak stroopwafel, yaklaşık €3-3,50.",why:"Merkezdeki turist tuzaklarının yarı fiyatı.",hours:"Yalnızca Pzt, Cum, Cmt 11:00-17:00",tip:"Haftanın çoğu günü kapalı, gününü denk getir."},
+      {id:"spang",cat:"food",name:"Warung Spang Makandra",lat:52.3553736,lon:4.8896417,pid:"ChIJv5gqjPIJxkcR-Z3A4af3ZmI",price:"€€",eat:"Surinam-Cava: saoto çorbası, rames tabağı, kızarmış muz.",why:"De Pijp'te oturmalı, doyurucu ve makul.",hours:"Her gün 11:00-22:00 (Paz 13:00'te açılır)"}
+    ],
+    routes:[
+      {id:"r-merkez",name:"Tarihi Merkez",wiki:"Dam_Square",desc:"Gardan çıkıp Damrak, Dam, Kalverstraat ve Begijnhof üzerinden Munt Kulesi'ne.",why:"İlk gün şehri tanımak için.",stops:["Centraal","Damrak","Dam Meydanı","Begijnhof","Spui","Muntplein"],pts:[[52.3783,4.8995],[52.3765,4.8962],[52.3731,4.8924],[52.3694,4.8904],[52.3688,4.8909],[52.3668,4.8932]]},
+      {id:"r-wallen",name:"De Wallen (Red Light)",wiki:"De_Wallen",desc:"Dam'dan Oudezijds kanallarına, Oude Kerk ve Nieuwmarkt üzerinden Zeedijk'e.",hist:"De Wallen şehrin en eski mahallesidir, adı ortaçağ surlarından (wal) gelir. 14. yüzyıldan beri liman mahallesiydi: gemiden inen denizciler için meyhaneler ve genelevler burada toplandı. Hollanda'da seks işçiliği 2000'de yasal ve denetimli hâle geldi. Belediye son yıllarda vitrin sayısını azaltıyor ve mahalleyi taşımayı tartışıyor.",why:"En iyi hâli hava kararırken.",tip:"Vitrinlerdeki kişilerin fotoğrafını veya videosunu çekmek yasak. Vlog çekerken kamerayı kanala ve binalara çevir.",stops:["Dam","Oudezijds Voorburgwal","Oude Kerk","Oudezijds Achterburgwal","De Waag","Zeedijk"],pts:[[52.3731,4.8924],[52.3724,4.8962],[52.3741,4.8979],[52.3746,4.8993],[52.3727,4.9004],[52.3755,4.9005],[52.377,4.8995]]},
+      {id:"r-jordaan",name:"Jordaan ve Kanallar",wiki:"Jordaan",desc:"Brouwersgracht'tan Noordermarkt'a, Prinsengracht boyunca Anne Frank Evi ve Dokuz Sokak'tan Leidseplein'e.",hist:"Jordaan 17. yüzyılda işçiler, zanaatkârlar ve göçmenler için kuruldu, sokakları eski hendeklerin yönünü izlediği için kanal halkasına çapraz durur. 20. yüzyılda yıkılması planlanan yoksul mahalle, bugün şehrin en pahalı ve en sevilen semtlerinden biridir.",why:"Dar sokaklar, tekne evler, elmalı turta molası.",stops:["Brouwersgracht","Noordermarkt","Prinsengracht","Westerkerk","Runstraat","Leidseplein"],pts:[[52.3806,4.888],[52.3791,4.8863],[52.3765,4.8842],[52.3749,4.8837],[52.3688,4.8841],[52.3641,4.8828]]},
+      {id:"r-foto",name:"Altın Kıvrım ve Amstel",wiki:"Herengracht",desc:"Muntplein'dan Herengracht'ın en zengin kıvrımına, Yedi Köprü, Amstel ve Magere Brug'dan Dans Eden Evler'e.",hist:"Herengracht'ın Leidsestraat ile Vijzelstraat arasındaki bölümü Gouden Bocht (Altın Kıvrım) diye bilinir. 17. yüzyılın en zengin tüccarları burada çift parsel alıp şehrin en geniş konaklarını yaptırdı.",why:"Fotoğraf rotası. Gün batımına denk getir.",stops:["Muntplein","Herengracht","Yedi Köprü","Keizersgracht","Magere Brug","Dans Eden Evler"],pts:[[52.3668,4.8932],[52.3657,4.8915],[52.36496,4.89587],[52.36367,4.89815],[52.36426,4.90116],[52.3636,4.90238],[52.36771,4.89703]]},
+      {id:"r-pijp",name:"De Pijp Lezzet Turu",wiki:"De_Pijp",desc:"Rijksmuseum geçidinden Museumplein'a, Albert Cuyp pazarı boyunca Sarphatipark'a.",why:"Müzeden sonra ucuza karın doyurmak için.",stops:["Rijksmuseum","Museumplein","Albert Cuyp","Rudi's","Sarphatipark"],pts:[[52.36,4.8852],[52.3582,4.8838],[52.3553,4.8916],[52.3558,4.895],[52.3546,4.8962]]}
+    ]
+  }
+};
+
+/* ============================ ARAYÜZ ============================ */
+const CATS = {
+  hist:{label:"Tarihi",tag:"Tarihi nokta",c:"var(--hist)"},
+  walk:{label:"Rotalar",tag:"Yürüyüş rotası",c:"var(--walk)"},
+  food:{label:"Yemek",tag:"Fiyat performans",c:"var(--food)"},
+  photo:{label:"Foto",tag:"Foto noktası",c:"var(--photo)"}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let store = {done:{},fav:{},layers:{hist:true,food:true,walk:true,photo:true},geo:{}};
+try { Object.assign(store, JSON.parse(localStorage.getItem("dolcanrota.v1") || "{}")); } catch(e){}
+const save = () => { try { localStorage.setItem("dolcanrota.v1", JSON.stringify(store)); } catch(e){} };
+
+let city, map, tab = "map", sel = null, me = null, meMarker, follow = false;
+const markers = {};
+
+/* Fotoğraflar Wikipedia'dan canlı çekilir. */
+const photoCache = {};
+function photo(title, size){
+  const key = title + "|" + size;
+  if (!photoCache[key]) photoCache[key] = fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=" + size + "&titles=" + encodeURIComponent(title))
+    .then(r => r.json()).then(j => { const p = Object.values(j.query.pages)[0]; return p.thumbnail ? p.thumbnail.source : null; }).catch(() => null);
+  return photoCache[key];
+}
+
+/* ---------- Ana ekran ---------- */
+function renderHome(){
+  $("#cityCards").innerHTML = Object.entries(CITIES).map(([key,c]) =>
+    `<button class="city-card" type="button" data-city="${key}"><span class="city-body"><span class="city-name">${c.name}</span>
+     <span class="city-meta">${c.places.filter(p=>p.cat==="hist").length} tarihi nokta · ${c.places.filter(p=>p.cat==="food").length} yemek · ${c.routes.length} rota · ${c.places.filter(p=>p.cat==="photo").length} foto</span>
+     <span class="go">Haritayı aç</span></span></button>`).join("");
+  Object.entries(CITIES).forEach(([key,c]) => photo(c.hero, 1000).then(src => { if (!src) return;
+    const img = new Image(); img.alt = ""; img.onload = () => document.querySelector(`[data-city="${key}"]`).prepend(img); img.src = src; }));
+}
+$("#cityCards").addEventListener("click", e => { const b = e.target.closest("[data-city]"); if (b) openCity(b.dataset.city); });
+$("#addCity").addEventListener("click", () => { $("#addNote").hidden = !$("#addNote").hidden; });
+$("#back").addEventListener("click", () => { $("#city").hidden = true; $("#home").hidden = false; });
+
+/* ---------- Harita (MapLibre + OpenFreeMap, anahtar gerektirmez) ---------- */
+const ll = p => [p[1], p[0]];
+function themed(style){
+  const C = {land:"#FFE3B8", water:"#27B7D9", green:"#B4DB7A", bld:"#F5B872", edge:"#E39A4E", road:"#FFF9EE", cas:"#E9AE6E", text:"#5A3418", halo:"#FFF3DC"};
+  style.layers = style.layers.filter(l => !/^poi/.test(l.id) && l.type !== "fill-extrusion");
+  style.layers.forEach(l => { const sl = l["source-layer"] || "", p = l.paint = l.paint || {};
+    if (l.type === "background") p["background-color"] = C.land;
+    else if (l.type === "fill"){
+      if (sl === "water"){ delete p["fill-pattern"]; p["fill-color"] = C.water; }
+      else if (sl === "building"){ delete l.maxzoom; p["fill-color"] = C.bld; p["fill-outline-color"] = C.edge; p["fill-opacity"] = 1; }
+      else if (sl === "park" || sl === "landcover"){ delete p["fill-pattern"]; p["fill-color"] = C.green; }
+      else if (sl === "landuse"){ delete p["fill-pattern"]; p["fill-color"] = "#FFD7A0"; }
+      else if (sl === "transportation" || sl === "aeroway") p["fill-color"] = C.road;
+    } else if (l.type === "line"){
+      if (sl === "waterway") p["line-color"] = C.water;
+      else if (sl === "transportation" && !/rail|transit/.test(l.id)) p["line-color"] = /casing/.test(l.id) ? C.cas : C.road;
+    } else if (l.type === "symbol" && l.layout && l.layout["text-field"]){
+      const w = /water/.test(sl); p["text-color"] = w ? "#0B6E86" : C.text; p["text-halo-color"] = w ? "#BFEFF8" : C.halo; p["text-halo-width"] = 1.4;
+    }
+  });
+  return style;
+}
+let lastPick = 0;
+function openCity(key){
+  city = CITIES[key]; sel = null;
+  $("#home").hidden = true; $("#city").hidden = false; $("#cityTitle").textContent = city.name;
+  renderChips(); setTab("map");
+  if (map){ map.resize(); return; }
+  if (!window.maplibregl){ toast("Harita kütüphanesi yüklenemedi. İnternet bağlantını kontrol et."); return; }
+  fetch("https://tiles.openfreemap.org/styles/liberty").then(r => r.json()).then(themed).then(initMap)
+    .catch(() => toast("Harita zemini yüklenemedi. Bağlantını kontrol edip sayfayı yenile."));
+}
+function initMap(style){
+  const b = city.bounds;
+  map = new maplibregl.Map({container:"map", style, center:ll(city.center), zoom:city.zoom, minZoom:city.minZoom, maxZoom:19,
+    maxBounds:[[b[0][1], b[0][0]], [b[1][1], b[1][0]]], dragRotate:false, pitchWithRotate:false, attributionControl:{compact:true}});
+  map.touchZoomRotate.disableRotation();
+  city.places.forEach(p => { markers[p.id] = mk(p.id, `<div class="${pinCls(p)}" style="--c:${CATS[p.cat].c}"><b>${p.price || ""}</b></div>`, p.name, [p.lat, p.lon], "bottom"); });
+  city.routes.forEach((r, i) => { markers[r.id] = mk(r.id, `<div class="rstart">${i+1}</div>`, r.name, r.pts[0], "center"); });
+  map.on("load", () => {
+    city.routes.forEach(r => {
+      map.addSource(r.id, {type:"geojson", data:gj(r.geo ? r.geo.line : r.pts)});
+      map.addLayer({id:r.id + "-c", type:"line", source:r.id, layout:{"line-cap":"round","line-join":"round"}, paint:{"line-color":"#fff","line-width":9}});
+      map.addLayer({id:r.id + "-l", type:"line", source:r.id, layout:{"line-cap":"round","line-join":"round"}, paint:{"line-color":"#18A957","line-width":5,"line-dasharray":[0.1,2]}});
+      map.on("click", r.id + "-c", () => { lastPick = Date.now(); select(r.id); });
+      loadRoute(r);
+    });
+    refresh();
+  });
+  map.on("click", () => { if (Date.now() - lastPick > 350) closeSheet(); });
+  map.on("dragstart", () => { follow = false; });
+  const lab = () => $("#map").classList.toggle("zoomed", map.getZoom() >= 15.5); map.on("zoom", lab); lab();
+  refresh(); startLocate();
+}
+const gj = pts => ({type:"Feature", geometry:{type:"LineString", coordinates:pts.map(ll)}});
+function mk(id, html, name, pos, anchor){
+  const el = document.createElement("button"); el.type = "button"; el.className = "mk"; el.setAttribute("aria-label", name);
+  el.innerHTML = html + "<span></span>"; el.lastChild.textContent = name;
+  el.addEventListener("click", e => { e.stopPropagation(); lastPick = Date.now(); select(id); });
+  const m = new maplibregl.Marker({element:el, anchor}).setLngLat(ll(pos)).addTo(map); m.el = el; return m;
+}
+const pinCls = p => "pin" + (p.cat === "photo" ? " ring" : "") + (store.done[p.id] ? " done" : "") + (store.fav[p.id] ? " fav" : "") + (sel === p.id ? " sel" : "");
+function refresh(){
+  if (!map) return;
+  city.places.forEach(p => { const el = markers[p.id].el; el.style.display = store.layers[p.cat] ? "" : "none"; el.firstChild.className = pinCls(p); el.classList.toggle("on", sel === p.id); });
+  city.routes.forEach(r => { const on = sel === r.id, el = markers[r.id].el; el.style.display = store.layers.walk ? "" : "none"; el.firstChild.classList.toggle("sel", on); el.classList.toggle("on", on);
+    if (!map.getLayer(r.id + "-c")) return; const v = store.layers.walk ? "visible" : "none";
+    map.setLayoutProperty(r.id + "-c", "visibility", v); map.setLayoutProperty(r.id + "-l", "visibility", v);
+    map.setPaintProperty(r.id + "-c", "line-color", on ? "#3A1D0B" : "#fff"); map.setPaintProperty(r.id + "-c", "line-width", on ? 12 : 9);
+    map.setPaintProperty(r.id + "-l", "line-color", on ? "#5CF08F" : "#18A957"); map.setPaintProperty(r.id + "-l", "line-width", on ? 7 : 5);
+    if (on){ map.moveLayer(r.id + "-c"); map.moveLayer(r.id + "-l"); } });
+}
+/* Rotalar gerçek sokaklardan geçsin: yaya yönlendirme servisi (OSM). Olmazsa düz çizgi kalır. */
+function loadRoute(r){
+  const useGeo = g => { r.geo = g; const s = map.getSource(r.id); if (s) s.setData(gj(g.line)); };
+  if (store.geo[r.id] && store.geo[r.id].v === r.pts.length){ useGeo(store.geo[r.id]); return; }
+  fetch("https://routing.openstreetmap.de/routed-foot/route/v1/foot/" + r.pts.map(p => p[1] + "," + p[0]).join(";") + "?overview=full&geometries=geojson")
+    .then(x => x.json()).then(j => { const rt = j.routes[0]; const g = {v:r.pts.length, km:rt.distance/1000, min:rt.duration/60, line:rt.geometry.coordinates.map(c => [c[1], c[0]])};
+      store.geo[r.id] = g; save(); useGeo(g); if (sel === r.id) select(r.id, true); }).catch(() => {});
+}
+function renderChips(){
+  $("#chips").innerHTML = Object.keys(CATS).map(k => `<button class="chip" type="button" data-layer="${k}" aria-pressed="${!!store.layers[k]}" style="--c:${CATS[k].c}"><i></i>${CATS[k].label}</button>`).join("");
+}
+$("#chips").addEventListener("click", e => { const b = e.target.closest("[data-layer]"); if (!b) return;
+  store.layers[b.dataset.layer] = !store.layers[b.dataset.layer]; save(); renderChips(); refresh(); if (tab !== "map") renderList(); });
+
+/* ---------- Canlı konum ---------- */
+const km = (a, b) => { const R = 6371, dLa = (b[0]-a[0])*Math.PI/180, dLo = (b[1]-a[1])*Math.PI/180;
+  const h = Math.sin(dLa/2)**2 + Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+const fmtD = d => d < 1 ? Math.round(d*1000/10)*10 + " m" : d.toFixed(1).replace(".", ",") + " km";
+const inCity = () => { const b = city.bounds; return me && me[0] > b[0][0] && me[0] < b[1][0] && me[1] > b[0][1] && me[1] < b[1][1]; };
+function gps(cls, text){ const g = $("#gps"); g.className = "gps " + cls; g.lastChild.textContent = text; }
+function toast(t){ const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 7000); }
+let watching = false;
+function startLocate(){
+  if (watching) return;
+  if (!navigator.geolocation){ gps("err", "Konum yok"); return; }
+  watching = true; gps("", "Konum aranıyor");
+  navigator.geolocation.watchPosition(pos => {
+    me = [pos.coords.latitude, pos.coords.longitude]; const acc = pos.coords.accuracy;
+    if (!meMarker){ const d = document.createElement("div"); d.className = "medot"; meMarker = new maplibregl.Marker({element:d}).setLngLat(ll(me)).addTo(map); }
+    meMarker.setLngLat(ll(me));
+    if (inCity()){ gps("on", "Canlı konum ±" + Math.round(acc) + " m"); if (follow) map.panTo(ll(me)); }
+    else gps("on", city.name + "'a " + fmtD(km(me, city.center)));
+  }, err => {
+    gps("err", "Konum kapalı");
+    toast(err.code === 1 ? "Konum izni verilmedi. Tarayıcı ayarlarından bu sayfa için konuma izin ver, sonra sayfayı yenile." : "Konum alınamadı. Telefonun konum servisini ve bağlantını kontrol et.");
+  }, {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+}
+$("#locate").addEventListener("click", () => {
+  if (!me){ toast("Konum henüz alınamadı. İzin penceresi çıktıysa izin ver."); return; }
+  if (inCity()){ follow = true; map.flyTo({center:ll(me), zoom:Math.max(map.getZoom(), 16)}); }
+  else toast("Konumun alındı: şu an " + city.name + " merkezine " + fmtD(km(me, city.center)) + " uzaktasın. Şehre girdiğinde mavi nokta haritada görünür.");
+});
+
+/* ---------- Kart ---------- */
+const find = id => city.places.find(p => p.id === id) || city.routes.find(r => r.id === id);
+function select(id, keepView){
+  sel = id; const o = find(id), isRoute = !!o.pts, cat = isRoute ? "walk" : o.cat;
+  if (tab !== "map") setTab("map"); refresh();
+  if (!keepView && map){
+    const h = $("#map").clientHeight, narrow = innerWidth < 760;
+    if (isRoute){ const pts = (o.geo ? o.geo.line : o.pts), bb = new maplibregl.LngLatBounds(ll(pts[0]), ll(pts[0])); pts.forEach(p => bb.extend(ll(p)));
+      map.fitBounds(bb, {padding:{top:40, left:40, right:narrow ? 40 : 440, bottom:narrow ? h*0.55 : 40}, duration:600}); }
+    else map.flyTo({center:[o.lon, o.lat], zoom:Math.max(map.getZoom(), 16), offset:narrow ? [0, -h*0.25] : [-200, 0], duration:600});
+  }
+  const q = encodeURIComponent(o.name + ", " + city.name); let facts = "", gm, dir, open = [];
+  if (isRoute){
+    const g = o.geo;
+    facts = g ? `<dt>Mesafe</dt><dd>${g.km.toFixed(1).replace(".",",")} km</dd><dt>Süre</dt><dd>Yaklaşık ${Math.round(g.min/5)*5} dk (molasız)</dd>` : `<dt>Mesafe</dt><dd>Hesaplanıyor</dd>`;
+    facts += `<dt>Duraklar</dt><dd>${o.stops.map(esc).join(" → ")}</dd>`;
+    const s = o.pts[0], e = o.pts[o.pts.length-1], mid = o.pts.slice(1,-1).map(p => p.join(",")).join("|");
+    gm = `https://www.google.com/maps/dir/?api=1&origin=${s.join(",")}&destination=${e.join(",")}&waypoints=${encodeURIComponent(mid)}&travelmode=walking`;
+    dir = `https://www.google.com/maps/dir/?api=1&destination=${s.join(",")}&travelmode=walking`;
+  } else {
+    if (me && inCity()) facts += `<dt>Uzaklık</dt><dd>Buradan ${fmtD(km(me, [o.lat, o.lon]))} (kuş uçuşu)</dd>`;
+    if (o.eat) facts += `<dt>Ne yenir</dt><dd>${esc(o.eat)}</dd><dt>Fiyat</dt><dd>${o.price} ${o.price === "€" ? "(ucuz)" : "(orta)"}</dd>`;
+    if (o.dur) facts += `<dt>Süre</dt><dd>${esc(o.dur)}</dd>`;
+    if (o.cat !== "food") facts += `<dt>Giriş</dt><dd>${o.fee ? esc(o.fee) : "Doğrulanmadı"}</dd>`;
+    facts += `<dt>Saatler</dt><dd>${o.hours ? esc(o.hours) : "Doğrulanmadı"}</dd>`;
+    if (o.cat !== "food" && !o.fee) open.push("Açık nokta: güncel giriş ücreti doğrulanmadı, resmi siteden bak.");
+    gm = `https://www.google.com/maps/search/?api=1&query=${q}&query_place_id=${o.pid}`;
+    dir = `https://www.google.com/maps/dir/?api=1&destination=${q}&destination_place_id=${o.pid}&travelmode=walking`;
+  }
+  const s = $("#sheet"); s.style.setProperty("--c", CATS[cat].c);
+  s.innerHTML = `<button class="x" type="button" id="closeSheet" aria-label="Kartı kapat">✕</button><div class="photo none" id="ph"></div>
+    <div class="sbody"><span class="tag">${CATS[cat].tag}</span><h2>${esc(o.name)}</h2>
+    <p>${esc(o.desc || "")}</p><p class="why">${esc(o.why)}</p>
+    ${o.hist ? `<h3 class="sec">Tarihçe</h3><p class="histxt">${esc(o.hist)}</p>` : ""}
+    <dl class="facts">${facts}</dl>
+    ${o.tip ? `<p class="open-q">${esc(o.tip)}</p>` : ""}${open.map(t => `<p class="open-q">${t}</p>`).join("")}
+    <div class="acts">
+      <a class="btn primary" href="${dir}" target="_blank" rel="noopener">${isRoute ? "Başlangıca yol tarifi" : "Yol tarifi al"}</a>
+      <a class="btn" href="${gm}" target="_blank" rel="noopener">${isRoute ? "Rotayı Google Maps'te aç" : "Google Maps'te aç"}</a>
+      <button class="btn" type="button" data-t="done" aria-pressed="${!!store.done[id]}">${store.done[id] ? "Gittim ✓" : "Gittim"}</button>
+      <button class="btn" type="button" data-t="fav" aria-pressed="${!!store.fav[id]}">${store.fav[id] ? "Favoride ★" : "Favori"}</button>
+      ${o.wiki && !o.gen ? `<a class="btn" style="grid-column:1/-1" href="https://en.wikipedia.org/wiki/${o.wiki}" target="_blank" rel="noopener">Devamını Wikipedia'da oku</a>` : ""}
+    </div></div>`;
+  s.hidden = false; if (!keepView) s.scrollTop = 0; $("#toast").hidden = true;
+  if (o.wiki) photo(o.wiki, 800).then(src => { if (!src || sel !== id) return; const ph = $("#ph"); if (!ph) return; ph.className = "photo";
+    ph.innerHTML = `<img alt="${esc(o.name)}" src="${src}"><a href="https://en.wikipedia.org/wiki/${o.wiki}" target="_blank" rel="noopener">${o.gen ? "Temsili görsel · Wikipedia" : "Fotoğraf: Wikipedia"}</a>`; });
+}
+$("#sheet").addEventListener("click", e => {
+  if (e.target.closest("#closeSheet")){ closeSheet(); return; }
+  const t = e.target.closest("[data-t]"); if (!t) return;
+  const k = t.dataset.t; if (store[k][sel]) delete store[k][sel]; else store[k][sel] = 1; save(); select(sel, true);
+});
+function closeSheet(){ if ($("#sheet").hidden) return; $("#sheet").hidden = true; sel = null; refresh(); }
+
+/* ---------- Liste ve favoriler ---------- */
+function setTab(t){
+  tab = t; document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+  $("#list").hidden = t === "map"; $("#locate").hidden = t !== "map";
+  if (t !== "map"){ $("#sheet").hidden = true; $("#toast").hidden = true; renderList(); } else if (map) map.resize();
+}
+document.querySelector(".tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+function renderList(){
+  const favOnly = tab === "fav", near = me && inCity(); let html = "";
+  for (const k in CATS){
+    if (!store.layers[k]) continue;
+    let items = (k === "walk" ? city.routes : city.places.filter(p => p.cat === k)).slice();
+    if (favOnly) items = items.filter(o => store.fav[o.id]);
+    if (near && k !== "walk") items.sort((a, b) => km(me, [a.lat, a.lon]) - km(me, [b.lat, b.lon]));
+    if (!items.length) continue;
+    html += `<h2 class="lh" style="--c:${CATS[k].c}"><i></i>${CATS[k].label}</h2>` + items.map(o => {
+      const sub = o.pts ? (o.geo ? o.geo.km.toFixed(1).replace(".",",") + " km · " + Math.round(o.geo.min/5)*5 + " dk" : o.why) : (o.price ? o.price + " · " + o.why : o.why);
+      const right = [near && !o.pts ? fmtD(km(me, [o.lat, o.lon])) : "", store.done[o.id] ? "Gittim ✓" : ""].filter(Boolean).join("<br>");
+      return `<button class="row" type="button" data-id="${o.id}" style="--c:${CATS[k].c}"><div><b>${esc(o.name)}</b><small>${esc(sub)}</small></div>${right ? `<em>${right}</em>` : ""}</button>`;
+    }).join("");
+  }
+  $("#list").innerHTML = (html || `<p class="empty">${favOnly ? "Henüz favorin yok. Bir noktanın kartından Favori'ye bas." : "Bütün katmanlar kapalı. Üstteki çiplerden birini aç."}</p>`) + `<p class="foot">Veriler en son ${city.updated} tarihinde doğrulandı.${near ? " Liste sana yakınlığa göre sıralı." : ""}</p>`;
+}
+$("#list").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) select(b.dataset.id); });
+
+renderHome();
+</script>
+</body>
+</html>
